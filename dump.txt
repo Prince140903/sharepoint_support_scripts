@@ -1,0 +1,46 @@
+Remove-Item -Recurse -Force "C:\Users\shale\OneDrive\Documents\PowerShell\Modules\PnP.PowerShell\3.1.0"
+Install-Module PnP.PowerShell -AllowPrerelease -Force
+Import-Module PnP.PowerShell -Force
+Get-Module PnP.PowerShell
+
+pwsh -ExecutionPolicy Bypass -File "scripts/Apply-MetadataMapping.ps1" `
+    -SiteUrl "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+    -MappingCsv ".\mapping_full_metadata.csv" `
+    -FallbackUpn "sharepoint.admin@ducorpgroup.com" `
+    -ClientId "3156ca39-9da7-433d-be94-2bae74c344fd" `
+    -Tenant "ducorpgrp.onmicrosoft.com" `
+    -WhatIf
+
+Connect-PnPOnline -Url "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+                  -ClientId "3156ca39-9da7-433d-be94-2bae74c344fd" `
+                  -Tenant "ducorpgrp.onmicrosoft.com" `
+                  -Interactive
+
+$lib = Get-PnPList -Identity "Shared Documents"
+$originalMajor  = $lib.EnableVersioning
+$originalMinor  = $lib.EnableMinorVersions
+$originalCheck  = $lib.ForceCheckout
+
+
+# Restore the original library settings
+Set-PnPList -Identity $lib.Id `
+    -EnableVersioning:$originalMajor `
+    -EnableMinorVersions:$originalMinor `
+    -ForceCheckout:$originalCheck
+Disconnect-PnPOnline
+
+pwsh -ExecutionPolicy Bypass -File "scripts/Apply-MetadataMapping.ps1" `
+    -SiteUrl "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+    -MappingCsv ".\mapping_full_metadata.csv" `
+    -FallbackUpn "sharepoint.admin@ducorpgroup.com" `
+    -ClientId "3156ca39-9da7-433d-be94-2bae74c344fd" `
+    -Tenant "ducorpgrp.onmicrosoft.com"
+
+    Connect-PnPOnline -Url "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+                  -ClientId "3156ca39-9da7-433d-be94-2bae74c344fd" `
+                  -Tenant "ducorpgrp.onmicrosoft.com" `
+                  -Interactive
+$targetUrl = "/sites/Testing-site/Shared Documents/Company-APEX Tanzania/APEX-EOI/AUMS/EOI_20240720_AUMS (Dy Mark).pdf"
+
+$listItem = Get-PnPFile -Url $targetUrl -AsListItem -ErrorAction Stop
+Get-PnPProperty -ClientObject $listItem -Property ComplianceTag, IsRecord, LockedByUser

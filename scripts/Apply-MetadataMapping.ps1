@@ -367,19 +367,12 @@ try {
             $createdDate = Convert-ToPnPDate -Value $row.created_server_modified
         }
 
-        $modifiedDate = Convert-ToPnPDate -Value $row.last_client_modified
-        if (-not $modifiedDate) {
-            $modifiedDate = Convert-ToPnPDate -Value $row.last_server_modified
-        }
-        if ($row.last_server_modified) {
-            $serverModifiedDate = Convert-ToPnPDate -Value $row.last_server_modified
-            if ($serverModifiedDate) {
-                $modifiedDate = $serverModifiedDate
+        $modifiedDate = $null
+        if ($row.last_client_modified -or $row.last_server_modified) {
+            $modifiedDate = Convert-ToPnPDate -Value $row.last_client_modified
+            if (-not $modifiedDate) {
+                $modifiedDate = Convert-ToPnPDate -Value $row.last_server_modified
             }
-        }
-
-        if ($createdDate -and $modifiedDate -and $createdDate -gt $modifiedDate) {
-            $createdDate = $modifiedDate
         }
 
         try {
@@ -397,25 +390,12 @@ try {
                 continue
             }
 
-            $values = @{
-                "Author"   = $authorLogin
-                "Editor"   = $editorLogin
-            }
-
-            if ($createdDate) {
-                $values["Created"] = $createdDate
-            }
-
-            if ($modifiedDate) {
-                $values["Modified"] = $modifiedDate
-            }
-
             $message = "Item ID $($listItem.Id) [$filePath] -> Author: $authorLogin; Editor: $editorLogin"
             if ($createdDate) {
                 $message += "; Created: $createdDate"
             }
             if ($modifiedDate) {
-                $message += "; Modified: $modifiedDate"
+                $message += "; Modified (skipped): $modifiedDate"
             }
 
             if ($PSCmdlet.ShouldProcess($filePath, "Update Author/Editor metadata")) {
@@ -428,11 +408,55 @@ try {
                         continue
                     }
 
-                    if ($script:UsingModule -eq "PnP.PowerShell") {
-                        Set-PnPListItem -List $listPipeBind -Identity $listItem.Id -Values $values -UpdateType "SystemUpdate"
-                    } else {
-                        Set-PnPListItem -List $listPipeBind -Identity $listItem.Id -Values $values -SystemUpdate
-                    }
+                            $ctx = Get-PnPContext
+                            $listItemRef = Get-PnPListItem -List $listPipeBind -Id $listItem.Id
+
+                            $authorFieldValue = $null
+                            $editorFieldValue = $null
+
+                            try {
+                                $authorUser = $ctx.Web.EnsureUser($authorLogin)
+                                $editorUser = $ctx.Web.EnsureUser($editorLogin)
+                                $ctx.Load($authorUser)
+                                $ctx.Load($editorUser)
+                                $ctx.ExecuteQuery()
+
+                                $authorFieldValue = New-Object Microsoft.SharePoint.Client.FieldUserValue
+                                $authorFieldValue.LookupId = $authorUser.Id
+                                $editorFieldValue = New-Object Microsoft.SharePoint.Client.FieldUserValue
+                            $editorFieldValue.LookupId = $editorUser.Id
+                            } catch {
+                                Write-Warning "Failed to resolve users for CSOM update: $($_.Exception.Message)"
+                                continue
+                            }
+
+                            if ($createdDate) {
+                                $listItemRef["Created"] = $createdDate
+                            }
+
+                            $ctx.Load($listItemRef)
+                            $ctx.ExecuteQuery()
+
+                            $authorInternal = $listItemRef.FieldValues["Author"]
+                            $editorInternal = $listItemRef.FieldValues["Editor"]
+
+                            if ($authorInternal) {
+                                $authorInternal.LookupId = $authorFieldValue.LookupId
+                            }
+                            if ($editorInternal) {
+                                $editorInternal.LookupId = $editorFieldValue.LookupId
+                            }
+
+                            $listItemRef["Author"] = $authorInternal
+                            $listItemRef["Editor"] = $editorInternal
+
+                            if ($createdDate) {
+                                $listItemRef["Created"] = $createdDate
+                            }
+
+                            $listItemRef.SystemUpdate()
+                            $ctx.ExecuteQuery()
+                            $ctx.ExecuteQuery()
 
                     Write-Host "[Updated] $message" -ForegroundColor Green
                 }
