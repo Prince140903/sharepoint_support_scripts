@@ -1,0 +1,92 @@
+pwsh scripts/Apply-MetadataMapping.ps1 `
+     -SiteUrl "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+     -MappingCsv ".\mapping.csv" `
+     -FallbackUpn "sharepoint.admin@ducorpgroup.com" `
+     -WhatIf
+
+powershell -ExecutionPolicy Bypass -File "scripts\Apply-MetadataMapping.ps1" `
+    -SiteUrl "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+    -MappingCsv ".\mapping.csv" `
+    -FallbackUpn "sharepoint.admin@ducorpgroup.com" `
+    -WhatIf
+
+Import-Module SharePointPnPPowerShellOnline   # or PnP.PowerShell
+Connect-PnPOnline -Url "https://ducorpgrp.sharepoint.com/sites/Testing-site" -UseWebLogin
+Get-PnPUser -Identity "pattni@ducorpgroup.com"
+
+# Generates a new Entra ID app configured for interactive sign-in
+Register-PnPEntraIDAppForInteractiveLogin `
+    -ApplicationName "PnP Metadata Tool" `
+    -Tenant "sharepoint.ducorpgroup.com" `
+    -Scopes "AllSites.FullControl"
+
+    Register-PnPEntraIDAppForInteractiveLogin `
+    -ApplicationName "PnP Metadata Tool" `
+    -Tenant "ducorpgrp.onmicrosoft.com"
+
+
+
+$clientId = "3156ca39-9da7-433d-be94-2bae74c344fd"
+$tenant   = "ducorpgrp.onmicrosoft.com"
+
+Connect-PnPOnline -Url "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+    -ClientId $clientId `
+    -Tenant $tenant `
+    -Interactive
+
+Get-PnPUser -Identity "pattni@ducorpgroup.com"
+
+     powershell -ExecutionPolicy Bypass -File "scripts\Apply-MetadataMapping.ps1" `
+       -SiteUrl "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+       -MappingCsv ".\mapping.csv" `
+       -FallbackUpn "sharepoint.admin@ducorpgroup.com" `
+       -WhatIf
+
+pwsh -ExecutionPolicy Bypass -File "scripts/Apply-MetadataMapping.ps1" `
+    -SiteUrl "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+    -MappingCsv ".\mapping.csv" `
+    -FallbackUpn "sharepoint.admin@ducorpgroup.com" `
+    -WhatIf
+
+$clientId = "3156ca39-9da7-433d-be94-2bae74c344fd"
+$tenant   = "ducorpgrp.onmicrosoft.com"
+
+Connect-PnPOnline -Url "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+    -ClientId $clientId `
+    -Tenant $tenant `
+    -Interactive
+
+# once connected, store the connection
+$connection = Get-PnPConnection
+
+pwsh -ExecutionPolicy Bypass -File "scripts/Apply-MetadataMapping.ps1" `
+    -SiteUrl "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+    -MappingCsv ".\mapping.csv" `
+    -FallbackUpn "sharepoint.admin@ducorpgroup.com" `
+    -ExistingConnection $connection `
+    -WhatIf
+
+
+pwsh -ExecutionPolicy Bypass -File "scripts/Apply-MetadataMapping.ps1" `
+     -SiteUrl "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+     -MappingCsv ".\mapping.csv" `
+     -FallbackUpn "sharepoint.admin@ducorpgroup.com" `
+     -ClientId "3156ca39-9da7-433d-be94-2bae74c344fd" `
+     -Tenant "ducorpgrp.onmicrosoft.com"
+
+pwsh -ExecutionPolicy Bypass -File "scripts/Apply-MetadataMapping.ps1" `
+    -SiteUrl "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+    -MappingCsv ".\mapping_full_metadata.csv" `
+    -FallbackUpn "sharepoint.admin@ducorpgroup.com" `
+    -ClientId "3156ca39-9da7-433d-be94-2bae74c344fd" `
+    -Tenant "ducorpgrp.onmicrosoft.com"
+    -WhatIf
+
+python dropbox_full_metadata.py              # resume export if needed
+python generate_mapping_from_dbid.py         # rebuild mapping_full_metadata.csv
+pwsh -ExecutionPolicy Bypass -File scripts/Apply-MetadataMapping.ps1 `
+    -SiteUrl "https://ducorpgrp.sharepoint.com/sites/Testing-site" `
+    -MappingCsv ".\mapping_full_metadata.csv" `
+    -ClientId "<your_app_client_id>" `
+    -Tenant "ducorpgrp.onmicrosoft.com" `
+    -WhatIf
